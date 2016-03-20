@@ -274,7 +274,7 @@ void extflash_read(void) {
 		if (r > sizeof(buf)) r = sizeof(buf);
 		pos+= r;				
 		if (r) for (i=0; i < r; i++) putc(buf[i], stdout);
-	} while (r==sizeof(buf));
+	} while (pos<sz);
 	
 	fflush(stdout);
 
