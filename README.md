@@ -10,9 +10,13 @@ Usage:
 The gz - file contains the Linux-version, the *.zip the Windows-version
 
 Commandline:
+
  List files : teensytransfer -l 
+ 
  Write file to flash : teensytransfer [-w] filename
+ 
  Read file from flash : teensytransfer -r filename > file
+ 
  Delete file from flash : teensytransfer -e filename
  
  
