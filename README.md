@@ -9,6 +9,8 @@ Usage:
  
 The gz - file contains the Linux-version, the *.zip the Windows-version
 
+The .mac.zip file contains the Mac OS version
+
 Commandline:
 
  List files : teensytransfer -l 
