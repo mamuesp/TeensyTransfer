@@ -25,7 +25,17 @@
 #ifndef _TeensyTransfer_h_
 #define _TeensyTransfer_h_
 
+
+//Disable unneeded functionality by commenting-out one or more of the following lines:
+#define _HAVE_SERFLASH
+#define _HAVE_EEPROM
+
+/***********************************************************************/
+//Needs Patch:
+#undef _HAVE_EEPROM //needs https://github.com/PaulStoffregen/cores/pull/118
+
 #include <mk20dx128.h>
+#include <avr_functions.h>
 
 #if !defined(KINETISK) && !defined(KINETISL)
 #error Use Teensy 3.x
@@ -36,25 +46,38 @@
 #endif
 
 
+#ifdef _HAVE_SERFLASH
 #include <SerialFlash.h>
 #include <SPI.h>
 
-const int FlashChipSelect = 6; // digital pin for flash chip CS pin
+#ifdef FLASHCHIPSELECT  // digital pin for flash chip CS pin
+const int FlashChipSelect = FLASHCHIPSELECT;
+#else
+const int FlashChipSelect = 6;
+#endif
+#endif
 
 class TeensyTransfer {
 public:
 	void transfer(void);
 private:
 	uint8_t buffer[64];// RawHID packets are always 64 bytes
-	uint8_t device;
-	uint8_t mode;
   int hid_sendAck(void);
   int hid_checkAck(void);
   int hid_sendWithAck(void);
+
+#ifdef _HAVE_SERFLASH
 	void serflash_write(void);
 	void serflash_read(void);
 	void serflash_list(void);
   void serflash_erasefile(void);
+#endif
+
+#ifdef _HAVE_EEPROM
+	void eeprom_write(void);
+	void eeprom_read(void);
+#endif
+
 };
 
 extern TeensyTransfer ttransfer;

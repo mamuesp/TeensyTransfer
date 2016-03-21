@@ -30,6 +30,7 @@ TeensyTransfer ttransfer;
 
 
 void TeensyTransfer::transfer(void) {
+	uint8_t device, mode;
   int n;
   n = RawHID.recv(buffer, 0); // 0 timeout = do not wait
   if (n > 0) {
@@ -41,19 +42,34 @@ void TeensyTransfer::transfer(void) {
     }
 
 		switch (device) {
+#ifdef _HAVE_SERFLASH
 			case 0 : {
 						SerialFlash.begin(FlashChipSelect);
 						switch (mode) {
-						case 0 : serflash_write();break;
-						case 1 : serflash_read();break;
-						case 2 : serflash_list();break;
-						case 3 : serflash_erasefile();break;
+							case 0 : serflash_write();break;
+							case 1 : serflash_read();break;
+							case 2 : serflash_list();break;
+							case 3 : serflash_erasefile();break;
 						//case 4 : serflash_erasedevice();break; todo...
-						default: return;
-					};
+						//case 9 : serflash_info();break; todo...
+							default: return;
+						};
 					break;
-				}
-			//case 1 : 		todo...
+					}
+#endif
+
+#ifdef _HAVE_EEPROM
+			case 1 : {
+						eeprom_initialize();
+						switch (mode) {
+							case 0 : eeprom_write();break;
+							case 1 : eeprom_read();break;
+							default: return;
+						}
+					break;
+					};
+#endif
+			//case 2 : 		todo...
 			default: return;
 		}
 
@@ -61,6 +77,9 @@ void TeensyTransfer::transfer(void) {
 
 }
 
+/********************************************************************************
+ common
+********************************************************************************/
 int TeensyTransfer::hid_sendAck(void) {
   return RawHID.send(buffer, 100);
 }
@@ -86,9 +105,14 @@ int TeensyTransfer::hid_sendWithAck(void) {
   return 0;
 }
 
+/********************************************************************************
+ Serial Flash
+********************************************************************************/
+#ifdef _HAVE_SERFLASH
+
 void TeensyTransfer::serflash_write(void) {
-  int  n, r, m, pos;
-  size_t sz;
+  int  n, r;
+  size_t sz, pos;
   char filename[64];
 
 	  sz = (buffer[2] << 24) | (buffer[3] << 16) | (buffer[4 ] << 8) | buffer[5];
@@ -129,8 +153,8 @@ void TeensyTransfer::serflash_write(void) {
 //        Serial.printf("timeout\n");
         return;
       }
-      ff.write(buffer, 64);
-      pos += 64;
+      ff.write(buffer, sizeof(buffer));
+      pos += sizeof(buffer);
     }
     ff.close();
 
@@ -250,7 +274,6 @@ void TeensyTransfer::serflash_list(void) {
     //SerialFlash.closedir();
 }
 
-
 void TeensyTransfer::serflash_erasefile(void) {
 int n;
 char filename[64];
@@ -273,4 +296,74 @@ char filename[64];
     return;
 
 }
+#endif //#ifdef _HAVE_SERFLASH
+/********************************************************************************
+ EEPROM
+********************************************************************************/
+#ifdef _HAVE_EEPROM
+void TeensyTransfer::eeprom_read(void) {
+int n;
+size_t sz;
+uint8_t *p;
+
+    sz = eeprom_size();
+    buffer[1] = (sz >> 24) & 0xff;
+    buffer[2] = (sz >> 16) & 0xff;
+    buffer[3] = (sz >> 8) & 0xff;
+    buffer[4] = sz & 0xff;
+    //Serial.printf("Size:%d",sz);
+    n = hid_sendWithAck();
+    if (n) {
+//      Serial.println("Error");
+      return;
+    }
+
+		p = 0;
+		//send EEprom to PC
+    do {
+      eeprom_read_block(buffer,p, sizeof(buffer));
+      n = hid_sendWithAck();
+      if (n) {
+//      Serial.println("Error");
+				return;
+      }
+			p += sizeof(buffer);
+    } while (p < (uint8_t*)sz);
+
+}
+
+void TeensyTransfer::eeprom_write(void) {
+int n;
+size_t sz;
+uint8_t *p;
+
+    sz = eeprom_size();
+    buffer[1] = (sz >> 24) & 0xff;
+    buffer[2] = (sz >> 16) & 0xff;
+    buffer[3] = (sz >> 8) & 0xff;
+    buffer[4] = sz & 0xff;
+    //Serial.printf("Size:%d",sz);
+    n = hid_sendWithAck();
+    if (n) {
+//      Serial.println("Error");
+      return;
+    }
+
+    p = 0;
+    while (p < (uint8_t*)sz) {
+      n = RawHID.recv(buffer, 500);
+      if (n < 0) {
+//        Serial.printf("timeout\n");
+        return;
+      }
+      eeprom_write_block(buffer,p, sizeof(buffer));
+      p += sizeof(buffer);
+    }
+
+    hid_sendAck();
+
+    //Serial.println("ok.");
+}
+#endif //#ifdef _HAVE_EEPROM
+
 #endif
