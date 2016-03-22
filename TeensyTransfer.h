@@ -31,8 +31,7 @@
 #define _HAVE_EEPROM
 
 /***********************************************************************/
-//Needs Patch:
-#undef _HAVE_EEPROM //needs https://github.com/PaulStoffregen/cores/pull/118
+
 
 #include <mk20dx128.h>
 #include <avr_functions.h>
@@ -62,15 +61,15 @@ public:
 	void transfer(void);
 private:
 	uint8_t buffer[64];// RawHID packets are always 64 bytes
-  int hid_sendAck(void);
-  int hid_checkAck(void);
-  int hid_sendWithAck(void);
+	int hid_sendAck(void);
+	int hid_checkAck(void);
+	int hid_sendWithAck(void);
 
 #ifdef _HAVE_SERFLASH
 	void serflash_write(void);
 	void serflash_read(void);
 	void serflash_list(void);
-  void serflash_erasefile(void);
+	void serflash_erasefile(void);
 #endif
 
 #ifdef _HAVE_EEPROM
