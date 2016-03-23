@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <time.h>
+#include <libgen.h>
 
 #if defined(OS_LINUX) || defined(OS_MACOSX)
 #include <sys/ioctl.h>
@@ -184,7 +185,8 @@ void extflash_write(void) {
   FILE *fp;
   int sz,r, pos;
   char * buffer;
-
+  char *basec, *bname;
+	
 	fp = fopen(fname, "rb");
 	if (fp == NULL) {
 		fprintf(stderr, "Unable to read %s\n\n", fname);
@@ -209,7 +211,9 @@ void extflash_write(void) {
 	buf[5] = sz & 0xff;
 	hid_sendWithAck();
 
-	strncpy((char*)buf, fname, sizeof(buf));
+	basec = strdup(fname);
+	bname = basename(basec);
+	strncpy((char*)buf, bname, MIN(strlen(bname),sizeof(buf)));
 	hid_sendWithAck();
 
 	//Todo: check for free space on flash here
