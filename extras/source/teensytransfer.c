@@ -43,7 +43,7 @@ void die(const char *format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	fprintf(stderr, "teensy_memloader: ");
+	fprintf(stderr, "teensytransfer: ");
 	vfprintf(stderr, format, args);
 	fprintf(stderr, "\n");
 	exit(1);
@@ -54,7 +54,7 @@ void usage(const char *err)
 {
 	if(err != NULL) fprintf(stderr, "%s\n\n", err);
 	fprintf(stderr,
-		"Usage: teensy_memloader [-w] [-r] [-l] [-e] [-v] [device] <file>\n"
+		"Usage: teensytransfer [-w] [-r] [-l] [-e] [device] <file>\n"
 		"\t-w : write (default)\n"
 		"\t-r : read\n"
 		"\t-e : erase file\n"
@@ -213,7 +213,7 @@ void extflash_write(void) {
 
 	basec = strdup(fname);
 	bname = basename(basec);
-	strncpy((char*)buf, bname, MIN(strlen(bname),sizeof(buf)));
+	strncpy((char*)buf, bname, MIN(strlen(bname),sizeof(buf)-1));	
 	hid_sendWithAck();
 
 	//Todo: check for free space on flash here
@@ -295,7 +295,7 @@ uint32_t sz,i;
 		hid_rcvWithAck();
 		if (buf[0]==0) break;
 		sz = (buf[1] << 24) | (buf[2] << 16) | (buf[3] << 8) | buf[4];
-		printf("%d\t",sz);
+		printf("%8d ",sz);
 		hid_rcvWithAck();
 		i = 0;
 		while( i<= sizeof(buf) && buf[i]) {putc(buf[i], stdout); i++;}
