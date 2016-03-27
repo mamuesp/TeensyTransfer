@@ -300,7 +300,7 @@ void TeensyTransfer::eeprom_read(void) {
   size_t sz;
   uint8_t *p;
 
-	sz = eeprom_size();
+	sz = (E2END) + 1;
 	buffer[1] = (sz >> 24) & 0xff;
 	buffer[2] = (sz >> 16) & 0xff;
 	buffer[3] = (sz >> 8) & 0xff;
