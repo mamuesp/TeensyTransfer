@@ -213,7 +213,10 @@ void extflash_write(void) {
 
 	basec = strdup(fname);
 	bname = basename(basec);
-	strncpy((char*)buf, bname, MIN(strlen(bname),sizeof(buf)-1));	
+
+	r =  MIN(strlen(bname),31);
+	strncpy((char*)buf, bname, r);
+	buf[r]=0;
 	hid_sendWithAck();
 
 	//Todo: check for free space on flash here
@@ -284,7 +287,7 @@ void extflash_read(void) {
 };
 
 void extflash_list(void) {
-uint32_t sz,i;
+uint32_t sz;
 	//printf("List\r\n");
 	memset(buf, 0, sizeof(buf));
 	buf[0] = mode;
@@ -294,12 +297,9 @@ uint32_t sz,i;
 	while (1) {
 		hid_rcvWithAck();
 		if (buf[0]==0) break;
-		sz = (buf[1] << 24) | (buf[2] << 16) | (buf[3] << 8) | buf[4];
-		printf("%8d ",sz);
-		hid_rcvWithAck();
-		i = 0;
-		while( i<= sizeof(buf) && buf[i]) {putc(buf[i], stdout); i++;}
-		printf("\n");
+		sz = (buf[1] << 24) | (buf[2] << 16) | (buf[3] << 8) | buf[4];				
+		hid_rcvWithAck();						
+		printf("%8d %s\n", sz, buf);		
 	}
 
 
