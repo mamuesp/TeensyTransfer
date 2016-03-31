@@ -61,6 +61,22 @@ void TeensyTransfer::transfer(void) {
 				}
 	#endif
 
+	#ifdef _HAVE_PARFLASH		
+		case 2 : {
+				ParallelFlash.begin();
+				switch (mode) {
+					case 0 : parflash_write();break;
+					case 1 : parflash_read();break;
+					case 2 : parflash_list();break;
+					case 3 : parflash_erasefile();break;
+				//case 4 : parflash_erasedevice();break; todo...
+				//case 9 : parflash_info();break; todo...
+					default: return;
+				};
+				break;
+				}
+	#endif	
+	
 	#ifdef _HAVE_EEPROM
 		case 1 : {
 				eeprom_initialize();
@@ -72,7 +88,7 @@ void TeensyTransfer::transfer(void) {
 				break;
 				};
 	#endif
-		//case 2 : 		todo...
+	
 		default: return;
 		}
 }
@@ -291,6 +307,194 @@ void TeensyTransfer::serflash_erasefile(void) {
 	return;
 }
 #endif //#ifdef _HAVE_SERFLASH
+
+/********************************************************************************
+ Parallel Flash
+********************************************************************************/
+#ifdef _HAVE_PARFLASH
+
+void TeensyTransfer::parflash_write(void) {
+  int  n, r;
+  size_t sz, pos;
+  char filename[64];
+
+	sz = (buffer[2] << 24) | (buffer[3] << 16) | (buffer[4 ] << 8) | buffer[5];
+
+	n = RawHID.recv(buffer, 500);
+	if (n < 0) {
+		//Serial.printf("timeout\n");
+		return;
+	}	
+	
+	strcpy( filename, (char*) &buffer[0]);
+	//Serial.printf("Filename:%s\n", &filename[0]);
+	if (ParallelFlash.exists(filename)) {
+		//Serial.printf("File exists. Deleting.\n");
+		ParallelFlash.remove(filename);
+	}
+
+	hid_sendAck();
+
+	r = ParallelFlash.create(filename, sz);
+	if (!r) {
+		//Serial.printf("unable to create file.\n");
+		return;
+	}
+	ParallelFlashFile ff = ParallelFlash.open(filename);
+	if (!ff) {
+		//Serial.printf("error opening freshly created file!\n");
+		return;
+	}
+	//Serial.print("Flashing.\n");
+
+	pos = 0;
+	while (pos < sz) {
+		n = RawHID.recv(buffer, 500);
+		if (n < 0) {
+//     	  Serial.printf("timeout\n");
+			return;
+		}
+		ff.write(buffer, sizeof(buffer));
+		pos += sizeof(buffer);
+	}
+	ff.close();
+	hid_sendAck();
+	//Serial.println("ok.");
+}
+
+
+
+
+void TeensyTransfer::parflash_read(void) {
+  int n,r;
+  unsigned int sz;
+  char filename[64];
+
+	//Serial.print("Read");
+	n = RawHID.recv(buffer, 500);
+	if (n >= 0) n = hid_sendAck();
+	if (n < 0) {
+//      Serial.printf("timeout\n");
+	  return;
+	}
+
+	strcpy( filename, (char*) &buffer[0]);
+	//Serial.println(filename);
+
+	if (ParallelFlash.exists(filename))
+		buffer[0] = 1;
+	else
+		buffer[0] = 2;
+
+	ParallelFlashFile ff = ParallelFlash.open(filename);
+
+	sz = ff.size();
+	buffer[1] = (sz >> 24) & 0xff;
+	buffer[2] = (sz >> 16) & 0xff;
+	buffer[3] = (sz >> 8) & 0xff;
+	buffer[4] = sz & 0xff;
+	//Serial.printf("Size:%d",sz);
+	
+	n = hid_sendWithAck();
+	if (n) {
+//      Serial.println("Error");
+		return;
+	}
+
+	//Send file to PC
+	do {
+		r = ff.read( buffer, sizeof(buffer) );
+		if (r) {
+			n = hid_sendWithAck();
+			if (n) {
+//          	Serial.println("Error");
+			return;
+			}
+		}
+	} while (r > 0);
+	ff.close();
+}
+
+void TeensyTransfer::parflash_list(void) {
+  int n;
+  uint32_t sz;
+//    Serial.println("List");
+	ParallelFlash.opendir();
+	char buf2[64];
+	while (1) {
+		if (ParallelFlash.readdir(buf2, sizeof(buf2), sz)) {
+
+			//Send Filesize
+			buffer[0] = 1;
+			buffer[1] = (sz >> 24) & 0xff;
+			buffer[2] = (sz >> 16) & 0xff;
+			buffer[3] = (sz >> 8) & 0xff;
+			buffer[4] = sz & 0xff;
+
+			n = hid_sendWithAck();
+			if (n) {
+	//          Serial.println("Error");
+				return;
+			}
+
+			//Send Filename
+			memcpy(buffer, buf2, sizeof(buffer));
+			n = hid_sendWithAck();
+			if (n) {
+				//Serial.println("Error");
+				return;
+			}
+	  }
+	  else break;
+	}
+	//Send Fee Space
+	/*
+	  sz = ParallelFlash.available();
+	  buffer[0] = 2;
+	  buffer[1] = (sz >> 24) & 0xff;
+	  buffer[2] = (sz >> 16) & 0xff;
+	  buffer[3] = (sz >> 8) & 0xff;
+	  buffer[4] = sz & 0xff;
+
+	  n = hid_sendWithAck();
+	  if (n) {
+	  Serial.println("Error");
+	  return;
+	  }
+	*/
+	//Send EOF
+	buffer[0] = 0;
+	n = hid_sendWithAck();
+	if (n) {
+//      Serial.println("Error");
+		return;
+	}
+	//ParallelFlash.closedir();
+}
+
+void TeensyTransfer::parflash_erasefile(void) {
+  int n;
+  char filename[64];
+//    Serial.println("erase");
+	n = RawHID.recv(buffer, 100);
+	if (n < 0) {
+//      Serial.printf("timeout\r\n");
+		return;
+	}
+
+	strcpy( filename, (char*) &buffer[0]);
+//	Serial.printf("Filename:%s\r\n", &filename[0]);
+	if (ParallelFlash.exists(filename)) {
+//  	Serial.printf("File exists. Deleting.\r\n");
+		ParallelFlash.remove(filename);
+		buffer[0] = 1;
+	} else buffer[0] = 0;
+
+	RawHID.send(buffer, 100);
+	return;
+}
+#endif //#ifdef _HAVE_PARFLASH
+
 /********************************************************************************
  EEPROM
 ********************************************************************************/

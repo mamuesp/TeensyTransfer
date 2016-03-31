@@ -27,8 +27,9 @@
 
 
 //Disable unneeded functionality by commenting-out one or more of the following lines:
-#define _HAVE_SERFLASH
-#define _HAVE_EEPROM
+#define _HAVE_SERFLASH	//Serial Flash
+#define _HAVE_EEPROM	//Teensy internal EEPROM
+//#define _HAVE_PARFLASH	//Parallel Flash
 
 /***********************************************************************/
 
@@ -56,6 +57,11 @@ const int FlashChipSelect = 6;
 #endif
 #endif
 
+#ifdef _HAVE_PARFLASH
+#include <ParallelFlash.h>
+#endif
+
+
 class TeensyTransfer {
 public:
 	void transfer(void);
@@ -70,6 +76,13 @@ private:
 	void serflash_read(void);
 	void serflash_list(void);
 	void serflash_erasefile(void);
+#endif
+
+#ifdef _HAVE_PARFLASH
+	void parflash_write(void);
+	void parflash_read(void);
+	void parflash_list(void);
+	void parflash_erasefile(void);
 #endif
 
 #ifdef _HAVE_EEPROM
