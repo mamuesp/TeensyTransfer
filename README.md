@@ -12,7 +12,10 @@ The gz - file contains the Linux-version, the *.zip the Windows-version
 The .mac.zip file contains the Mac OS version
 
 Commandline:
+====
 
+Serial Flash
+----
  List files from serial flash: teensytransfer -l 
  
  Write file to serial flash : teensytransfer [-w] filename
@@ -22,7 +25,8 @@ Commandline:
  Delete file from serial flash : teensytransfer -e filename
  
 
-
+Parallel connected SPI Flash
+----
  List files from parallel connected spi-flash: teensytransfer -l parflash
  
  Write file to parallel connected spi-flash : teensytransfer -w parflash filename
@@ -32,7 +36,8 @@ Commandline:
  Delete file from parallel connected spi-flash : teensytransfer -e parflash filename
  
  
- 
+Teensy internal EEPROM
+----
  Write file to internal eeprom: teensytransfer -w eeprom filename
  
  Read file from  internal eeprom : teensytransfer -r eeprom filename > file
