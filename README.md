@@ -22,6 +22,7 @@ Commandline:
  Delete file from serial flash : teensytransfer -e filename
  
 
+
  List files from parallel connected spi-flash: teensytransfer -l parflash
  
  Write file to parallel connected spi-flash : teensytransfer -w parflash filename
@@ -29,6 +30,7 @@ Commandline:
  Read file from parallel connected spi-flash : teensytransfer -r parflash filename > file
  
  Delete file from parallel connected spi-flash : teensytransfer -e parflash filename
+ 
  
  
  Write file to internal eeprom: teensytransfer -w eeprom filename
