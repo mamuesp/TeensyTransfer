@@ -13,14 +13,30 @@ The .mac.zip file contains the Mac OS version
 
 Commandline:
 
- List files : teensytransfer -l 
+ List files from serial flash: teensytransfer -l 
  
- Write file to flash : teensytransfer [-w] filename
+ Write file to serial flash : teensytransfer [-w] filename
  
- Read file from flash : teensytransfer -r filename > file
+ Read file from serial flash : teensytransfer -r filename > file
  
- Delete file from flash : teensytransfer -e filename
+ Delete file from serial flash : teensytransfer -e filename
+ 
+
+ List files from parallel connected spi-flash: teensytransfer -l parflash
+ 
+ Write file to parallel connected spi-flash : teensytransfer -w parflash filename
+ 
+ Read file from parallel connected spi-flash : teensytransfer -r parflash filename > file
+ 
+ Delete file from parallel connected spi-flash : teensytransfer -e parflash filename
  
  
-Support for more devices (i.e. eeprom) is in the works.
+ Write file to internal eeprom: teensytransfer -w eeprom filename
+ 
+ Read file from  internal eeprom : teensytransfer -r eeprom filename > file
+ 
+ (Output is a binary file)
+ 
+ 
+Support for more devices (i.e. SD-Card) is in progress.
 
