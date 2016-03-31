@@ -40,7 +40,7 @@ Teensy internal EEPROM
 ----
  Write file to internal eeprom: teensytransfer -w eeprom filename
  
- Read file from  internal eeprom : teensytransfer -r eeprom filename > file
+ Read file from  internal eeprom : teensytransfer -r eeprom > file
  
  (Output is a binary file)
  
