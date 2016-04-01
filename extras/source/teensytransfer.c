@@ -336,174 +336,7 @@ void serflash_erase(void) {
 
 };
 
-/***********************************************************************************************************
-  parflash
-************************************************************************************************************/
 
-
-void parflash_write(void);
-void parflash_read(void);
-void parflash_list(void);
-void parflash_delfile(void);
-void parflash_erase(void);
-
-void parflash() {
-  switch (mode) {
-	case 0 : parflash_write(); break;
-	case 1 : parflash_read();break;
-	case 2 : parflash_list();break;
-	case 3 : parflash_delfile();break;
-	case 4 : parflash_erase();break;
-  }
-}
-
-void parflash_write(void) {
-  FILE *fp;
-  int sz,r, pos;
-  char * buffer;
-  char *basec, *bname;
-	
-	fp = fopen(fname, "rb");
-	if (fp == NULL) {
-		fprintf(stderr, "Unable to read %s\n\n", fname);
-		usage(NULL);
-	}
-
-	//get size of file
-	fseek(fp, 0, SEEK_END);
-	sz = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-
-	//if (verbose) printf("Size of file is %d bytes.\n",sz);
-
-	if (sz == 0) die("");
-
-	memset(buf, 0, sizeof(buf));
-	buf[0] = mode;
-	buf[1] = device;
-	buf[2] = (sz >> 24) & 0xff;
-	buf[3] = (sz >> 16) & 0xff;
-	buf[4] = (sz >> 8) & 0xff;
-	buf[5] = sz & 0xff;
-	hid_sendWithAck();
-
-	basec = strdup(fname);
-	bname = basename(basec);
-
-	r =  MIN(strlen(bname),31);
-	strncpy((char*)buf, bname, r);
-	buf[r]=0;
-	hid_sendWithAck();
-
-	//Todo: check for free space on flash here
-
-	// allocate memory to contain the whole file:
-	buffer = (char*) malloc (sizeof(char) * sz);
-	if (buffer == NULL) die ("Memory error");
-
-	// copy the file into the buffer:
-	r = fread (buffer, 1, sz, fp);
-	if (r != sz) die("File reading error");
-
-	fclose (fp);
-
-	//Transfer the file to the Teensy
-	pos = 0;
-	while (pos < sz) {
-		int c = MIN(sizeof(buf), sz-pos);
-		memset(buf, 0xff, sizeof(buf));
-		memcpy(buf, buffer + pos, c);
-		pos += c;
-		r = rawhid_send(hid_device, buf, sizeof(buf), 200);
-		if (r < 0 ) die("Transfer error");
-	}
-	free (buffer);
-
-	if (hid_checkAck() != 0)  commErr() ;
-	//printf("%d\n",pos);
-
-};
-
-void parflash_read(void) {
-  unsigned sz, pos;
-  int r;
-
-//	printf("Read\r\n");
-	memset(buf, 0, sizeof(buf));
-	buf[0] = mode;
-	buf[1] = device;
-	hid_sendWithAck();
-	strncpy((char*)buf, fname, sizeof(buf));
-	hid_sendWithAck();
-	//r = rawhid_recv(hid_device, buf, sizeof(buf), 100);
-	hid_rcvWithAck();
-	//if (r < 1)  commErr() ;
-	if (buf[0]==2) die("File not found");
-	else if (buf[0]!=1)  commErr() ;
-	//hid_sendAck();
-	sz = (buf[1] << 24) | (buf[2] << 16) | (buf[3] << 8) | buf[4];
-	//printf("size:%d %d %d %d %d\r\n",sz, buf[1], buf[2], buf[3], buf[4]);
-
-	pos = 0;
-	int i;
-	do {
-		hid_rcvWithAck();
-		r = sz - pos;
-		if (r > sizeof(buf)) r = sizeof(buf);
-		pos+= r;
-		if (r) for (i=0; i < r; i++) putc(buf[i], stdout);
-	} while (pos<sz);
-	fflush(stdout);
-
-};
-
-void parflash_list(void) {
-uint32_t sz;
-	//printf("List\r\n");
-	memset(buf, 0, sizeof(buf));
-	buf[0] = mode;
-	buf[1] = device;
-	hid_sendWithAck();
-
-	while (1) {
-		hid_rcvWithAck();
-		if (buf[0]==0) break;
-		sz = (buf[1] << 24) | (buf[2] << 16) | (buf[3] << 8) | buf[4];				
-		hid_rcvWithAck();						
-		printf("%8d %s\n", sz, buf);		
-	}
-
-
-};
-
-void parflash_delfile(void) {
-uint32_t n;
-	//printf("del file \n");
-	memset(buf, 0, sizeof(buf));
-	buf[0] = mode;
-	buf[1] = device;
-	hid_sendWithAck();
-
-	strncpy((char*)buf, fname, sizeof(buf));
-	rawhid_send(hid_device, buf, sizeof(buf), 100);
-
-
-	n= rawhid_recv(hid_device, buf, sizeof(buf), 100);
-	if (n < 1) commErr();
-	if (buf[0]==0) die("File not found");
-
-}
-
-void parflash_erase(void) {
-	printf("erase chip\n");
-	memset(buf, 0, sizeof(buf));
-	buf[0] = mode;
-	buf[1] = device;
-	hid_sendWithAck();
-
-	rawhid_recv(hid_device, buf, sizeof(buf), 0);
-
-};
 
 /***********************************************************************************************************
   eeprom
@@ -609,8 +442,7 @@ int main(int argc, char **argv)
 
 	parse_options(argc, argv);
 
-	if ( (mode == 0 || mode == 1 || mode == 3) && (fname==NULL) && (device==0) ) usage("Filename required");
-	if ( (mode == 0 || mode == 1 || mode == 3) && (fname==NULL) && (device==2) ) usage("Filename required");	
+	if ( (mode == 0 || mode == 1 || mode == 3) && (fname==NULL) && (device==0 || device==2) ) usage("Filename required");	
 	if (mode == 4 && fname != NULL) usage("Filename not allowed");
 
 
@@ -628,8 +460,8 @@ int main(int argc, char **argv)
 	//clock_t t = clock();
 
 	switch(device) {
-		case 0: serflash();break;
-		case 2: parflash();break;
+		case 0:
+		case 2: serflash();break;
 		case 1: eeprom();break;
 		default: usage(NULL);
 	}
